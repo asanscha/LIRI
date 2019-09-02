@@ -25,7 +25,9 @@ To Use the application:
     View results and select another option.
 
 
-Gif of working application:
+DEMO:
+
+![LIRI App Demo](demo/LIRI.gif)
 
 
 
