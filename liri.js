@@ -1,11 +1,17 @@
 require("dotenv").config();
 var fs = require('fs');
+var inquire = require('inquirer')
 
 var keys = require("./keys.js");
 
 // var spotify = new Spotify(keys.spotify);
-var spotify = require('spotify');
 var request = require('request');
+var Spotify = require('node-spotify-api');
+ 
+var spotify = new Spotify({
+  id: keys.spotify.id,
+  secret: keys.spotify.secret
+});
 
 
 
@@ -14,12 +20,11 @@ var getArtistNames = function (artist) {
 }
 
 var getMeSpotify = function (songName) {
-
     spotify.search({ type: 'track', query: songName }, function (err, data) {
         if (err) {
             return console.log('Error occurred: ' + err);
         }
-        console.log(data);
+        // console.log(data);
         var songs = data.tracks.items;
         for (var i = 0; i < songs.length; i++) {
             console.log(i);
@@ -29,7 +34,7 @@ var getMeSpotify = function (songName) {
             console.log('album: ' + songs[i].album.name);
             console.log('--------------------------------------------------');
         }
-
+        setTimeout(cont, 2000)
     });
 }
 
@@ -51,6 +56,18 @@ var getMeMovie = function (movieName) {
             console.log('Actors: ' + jsonData.Actors)
             console.log('Rotten Tomatoes Rating: ' + jsonData.tomatoRating);
             console.log('Rotten Tomatoes URL: ' + jsonData.tomatoURL);
+            setTimeout(cont, 2000)
+        }
+    })
+}
+
+var runBandsInTown = function(artist) {
+    request(`https://rest.bandsintown.com/artists/${artist}/events?app_id=codingbootcamp`, function(error, response, body){
+        if (!error && response.statusCode == 200){
+            console.log(JSON.parse(body));
+            setTimeout(cont, 2000)
+        }else{
+            console.log('error', error);
         }
     })
 }
@@ -60,13 +77,14 @@ var doRandom = function() {
 fs.readFile('random.txt', 'utf8', function (err, data) {
     if (err) throw err;
 
-    var dataArr = data.split(',');
-    if (dataArr.length == 2) {
-        pick(dataArr[0], dataArr[1]);
-    } else if (dataArr.length ==1) {
-        pick(dataArr[0]);
+    var dataArr = data.split(';');
+    var rdn = dataArr[Math.floor(Math.random()*dataArr.length)]
+    var dataQuery = rdn.split(',')
+    if (dataQuery.length == 2) {
+        pick(dataQuery[0], dataQuery[1]);
+    } else if (dataQuery.length ==1) {
+        pick(dataQuery[0]);
     }
-
   });
 }
 
@@ -77,17 +95,58 @@ var pick = function (caseData, functionData) {
             break;
         case 'movie-this':
             getMeMovie(functionData);
+            break;
         case 'do-what-it-says':
             doRandom();
+            break;
+        case 'concert-this':
+            runBandsInTown(functionData);
             break;
         default:
             console.log('LIRI does not know that');
     }
 }
 
+initialize =()=>{
+    inquire
+    .prompt({
+        type: "list",
+        message: "What do you want to know?",
+        name:"option",
+        choices: ["spotify-this-song", "movie-this", "do-what-it-says", "concert-this"]
+    }
+    ).then(answer=>{
+        if (answer.option == "do-what-it-says"){
+            pick(answer.option)
+        }else{
+            inquire
+            .prompt(
+                {
+                    type: "input",
+                    message: "Please input your search term.",
+                    name: "term"
+                }
+            ).then(reply =>{
+                pick(answer.option,reply.term)
+            })
+        }
+    })
+}
 
-var runThis = function (argOne, argTwo) {
-    pick(argOne, argTwo);
-};
+cont =()=>{
+    inquire
+    .prompt({
+        type: "list",
+        message: "What would you like to do now?",
+        name: "option",
+        choices: ["Use another function", "quit LIRI"]
+    }).then(res=>{
+        if(res.option == "quit LIRI"){
+            process.exit();
+        }else{
+            initialize()
+        }
+    })
+}
 
-runThis(process.argv[2], process.argv[3]);
+initialize()
